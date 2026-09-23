@@ -24,6 +24,7 @@ import java.util.List;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers
@@ -78,7 +79,9 @@ class ChangePasswordEndpointTest {
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {"oldPassword":"oldpassword","newPassword":"newlongpassword"}"""))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("UNAUTHENTICATED"));
     }
 
     @Test
