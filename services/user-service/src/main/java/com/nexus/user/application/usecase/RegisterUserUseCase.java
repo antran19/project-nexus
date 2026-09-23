@@ -1,6 +1,8 @@
 package com.nexus.user.application.usecase;
 
+import com.nexus.common.events.UserRegisteredEvent;
 import com.nexus.user.application.exception.DuplicateEmailException;
+import com.nexus.user.application.port.out.EventPublisherPort;
 import com.nexus.user.application.port.out.PasswordHasherPort;
 import com.nexus.user.application.port.out.RoleRepositoryPort;
 import com.nexus.user.application.port.out.UserRepositoryPort;
@@ -17,13 +19,16 @@ public class RegisterUserUseCase {
     private final UserRepositoryPort userRepositoryPort;
     private final RoleRepositoryPort roleRepositoryPort;
     private final PasswordHasherPort passwordHasherPort;
+    private final EventPublisherPort eventPublisherPort;
 
     public RegisterUserUseCase(UserRepositoryPort userRepositoryPort,
                                 RoleRepositoryPort roleRepositoryPort,
-                                PasswordHasherPort passwordHasherPort) {
+                                PasswordHasherPort passwordHasherPort,
+                                EventPublisherPort eventPublisherPort) {
         this.userRepositoryPort = userRepositoryPort;
         this.roleRepositoryPort = roleRepositoryPort;
         this.passwordHasherPort = passwordHasherPort;
+        this.eventPublisherPort = eventPublisherPort;
     }
 
     @Transactional
@@ -41,6 +46,8 @@ public class RegisterUserUseCase {
         String hashedPassword = passwordHasherPort.hash(command.rawPassword());
         User user = User.register(command.email(), hashedPassword, command.fullName(), new RoleId(defaultRole.id()));
         User saved = userRepositoryPort.save(user);
+
+        eventPublisherPort.publish(new UserRegisteredEvent(saved.getId(), saved.getEmail(), saved.getFullName()));
 
         return new UserRegistrationResult(saved.getId(), saved.getEmail(), saved.getFullName());
     }

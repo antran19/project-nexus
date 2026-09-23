@@ -1,6 +1,8 @@
 package com.nexus.user.application.usecase;
 
+import com.nexus.common.events.UserRegisteredEvent;
 import com.nexus.user.application.exception.DuplicateEmailException;
+import com.nexus.user.application.port.out.EventPublisherPort;
 import com.nexus.user.application.port.out.PasswordHasherPort;
 import com.nexus.user.application.port.out.RoleRepositoryPort;
 import com.nexus.user.application.port.out.UserRepositoryPort;
@@ -22,6 +24,7 @@ class RegisterUserUseCaseTest {
     private UserRepositoryPort userRepositoryPort;
     private RoleRepositoryPort roleRepositoryPort;
     private PasswordHasherPort passwordHasherPort;
+    private EventPublisherPort eventPublisherPort;
     private RegisterUserUseCase useCase;
 
     @BeforeEach
@@ -29,7 +32,8 @@ class RegisterUserUseCaseTest {
         userRepositoryPort = mock(UserRepositoryPort.class);
         roleRepositoryPort = mock(RoleRepositoryPort.class);
         passwordHasherPort = mock(PasswordHasherPort.class);
-        useCase = new RegisterUserUseCase(userRepositoryPort, roleRepositoryPort, passwordHasherPort);
+        eventPublisherPort = mock(EventPublisherPort.class);
+        useCase = new RegisterUserUseCase(userRepositoryPort, roleRepositoryPort, passwordHasherPort, eventPublisherPort);
 
         when(roleRepositoryPort.findByCode("BUYER"))
                 .thenReturn(Optional.of(new Role("role-buyer", "BUYER", "Buyer", Set.of("AUTH.LOGIN"))));
@@ -50,6 +54,9 @@ class RegisterUserUseCaseTest {
                 u.getEmail().equals("alice@example.com")
                         && u.getHashedPassword().equals("hashed-longenough")
                         && u.getRoleId().value().equals("role-buyer")));
+        verify(eventPublisherPort).publish(argThat(event ->
+                event instanceof UserRegisteredEvent registered
+                        && registered.getEmail().equals("alice@example.com")));
     }
 
     @Test
