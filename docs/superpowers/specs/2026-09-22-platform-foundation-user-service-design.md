@@ -114,6 +114,69 @@ changes (shared library updates) must be one commit, not six. Independence at
 deployment time is preserved via per-service CI pipelines (path-triggered) and
 independent Docker image tags per service — documented in ADR-0002.
 
+## Internal layering (applies to every service, not just user-service)
+
+Each service follows Clean/Hexagonal Architecture, expanding the 4 top-level packages
+above into concrete layers. Shown here for `user-service`; every future service
+(Catalog, Commerce, Auction, Fulfillment, Notification) follows the same shape.
+
+```
+com.nexus.user/
+├── api/
+│   ├── UserController.java
+│   ├── AuthController.java
+│   ├── dto/
+│   │   ├── request/RegisterUserRequest.java
+│   │   └── response/UserResponse.java
+│   └── mapper/UserApiMapper.java           # DTO <-> domain (MapStruct)
+│
+├── application/
+│   ├── usecase/
+│   │   ├── RegisterUserUseCase.java
+│   │   ├── LoginUseCase.java
+│   │   └── ChangePasswordUseCase.java
+│   ├── port/out/                           # interfaces application depends on
+│   │   ├── UserRepositoryPort.java
+│   │   ├── PasswordHasherPort.java
+│   │   └── EventPublisherPort.java
+│   └── exception/DuplicateEmailException.java
+│
+├── domain/                                 # no Spring/JPA imports allowed here
+│   ├── model/User.java                     # plain Java, not @Entity
+│   ├── model/Role.java, Privilege.java
+│   ├── event/UserRegisteredEvent.java
+│   └── service/PasswordPolicy.java
+│
+├── infrastructure/                         # implements the port interfaces
+│   ├── persistence/
+│   │   ├── entity/UserJpaEntity.java       # @Entity — kept separate from domain.model.User
+│   │   ├── UserJpaRepository.java          # Spring Data interface
+│   │   └── UserRepositoryAdapter.java      # implements UserRepositoryPort
+│   ├── messaging/
+│   │   ├── OutboxEventPublisherAdapter.java  # implements EventPublisherPort
+│   │   └── OutboxRelayJob.java             # scheduled: outbox table -> Kafka
+│   ├── security/BCryptPasswordHasherAdapter.java
+│   └── config/SecurityConfig.java, KafkaConfig.java
+│
+└── UserServiceApplication.java
+```
+
+**Dependency direction (inward only):**
+```
+api -> application -> domain
+infrastructure -> application (implements its port interfaces) -> domain
+```
+`domain` depends on nothing — no Spring, no JPA, no Kafka. Only `infrastructure` knows
+which concrete technology is behind each port.
+
+`domain.model.User` (plain) is kept separate from
+`infrastructure.persistence.entity.UserJpaEntity` (`@Entity`-annotated) specifically so
+business logic never carries a persistence-framework dependency; `UserRepositoryAdapter`
+is the only place that maps between the two. This "port in application, adapter in
+infrastructure" split is the Dependency Inversion Principle applied directly — it is
+also what makes `RegisterUserUseCase` unit-testable with a mocked
+`UserRepositoryPort`, no Spring context or database required.
+
 ## Runtime components (local, docker-compose)
 
 | Component | Port | Role |
