@@ -1,6 +1,12 @@
 server:
   port: 8081
 
+nexus:
+  security:
+    jwt:
+      secret: "dev-only-secret-key-change-in-production-min-256-bits-long!!"
+      expiration-minutes: 60
+
 spring:
   application:
     name: user-service
