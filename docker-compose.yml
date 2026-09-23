@@ -13,11 +13,6 @@ services:
       timeout: 5s
       retries: 10
 
-  discovery-server:
-    build: ./platform/discovery-server
-    ports:
-      - "8761:8761"
-
   kafka:
     image: apache/kafka:3.7.1
     ports:
@@ -32,8 +27,29 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
+  discovery-server:
+    build:
+      context: .
+      dockerfile: platform/discovery-server/Dockerfile
+    ports:
+      - "8761:8761"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: platform/api-gateway/Dockerfile
+    depends_on:
+      discovery-server:
+        condition: service_started
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka
+    ports:
+      - "8080:8080"
+
   user-service:
-    build: ./services/user-service
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
     depends_on:
       postgres-user:
         condition: service_healthy
