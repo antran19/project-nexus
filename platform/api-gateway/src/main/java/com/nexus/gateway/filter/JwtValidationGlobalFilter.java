@@ -1,22 +1,34 @@
 package com.nexus.gateway.filter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nexus.common.core.ApiError;
+import com.nexus.common.core.ApiResponse;
 import com.nexus.common.security.JwtTokenProvider;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Component
 public class JwtValidationGlobalFilter implements GlobalFilter, Ordered {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final ObjectMapper objectMapper;
 
-    public JwtValidationGlobalFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtValidationGlobalFilter(JwtTokenProvider jwtTokenProvider, ObjectMapper objectMapper) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -28,11 +40,25 @@ public class JwtValidationGlobalFilter implements GlobalFilter, Ordered {
 
         String token = extractToken(exchange.getRequest());
         if (token == null || !jwtTokenProvider.isValid(token)) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return unauthorized(exchange);
         }
 
         return chain.filter(exchange);
+    }
+
+    private Mono<Void> unauthorized(ServerWebExchange exchange) {
+        ServerHttpResponse response = exchange.getResponse();
+        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        ApiError error = new ApiError("UNAUTHENTICATED", "Authentication required", List.of());
+        byte[] bytes;
+        try {
+            bytes = objectMapper.writeValueAsBytes(ApiResponse.error(error));
+        } catch (JsonProcessingException e) {
+            bytes = "{}".getBytes(StandardCharsets.UTF_8);
+        }
+        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+        return response.writeWith(Mono.just(buffer));
     }
 
     @Override

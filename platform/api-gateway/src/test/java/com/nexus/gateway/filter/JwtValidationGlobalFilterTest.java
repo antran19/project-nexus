@@ -1,9 +1,11 @@
 package com.nexus.gateway.filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexus.common.security.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
@@ -16,7 +18,8 @@ import static org.mockito.Mockito.*;
 class JwtValidationGlobalFilterTest {
 
     private final JwtTokenProvider jwtTokenProvider = mock(JwtTokenProvider.class);
-    private final JwtValidationGlobalFilter filter = new JwtValidationGlobalFilter(jwtTokenProvider);
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JwtValidationGlobalFilter filter = new JwtValidationGlobalFilter(jwtTokenProvider, objectMapper);
     private final GatewayFilterChain chain = mock(GatewayFilterChain.class);
 
     @Test
@@ -39,6 +42,7 @@ class JwtValidationGlobalFilterTest {
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         verify(chain, never()).filter(any());
+        assertUnauthenticatedEnvelope(exchange);
     }
 
     @Test
@@ -50,6 +54,7 @@ class JwtValidationGlobalFilterTest {
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         verify(chain, never()).filter(any());
+        assertUnauthenticatedEnvelope(exchange);
     }
 
     @Test
@@ -62,6 +67,15 @@ class JwtValidationGlobalFilterTest {
         filter.filter(exchange, chain).block();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertUnauthenticatedEnvelope(exchange);
+    }
+
+    private void assertUnauthenticatedEnvelope(ServerWebExchange exchange) {
+        assertThat(exchange.getResponse().getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_JSON);
+        String body = ((org.springframework.mock.http.server.reactive.MockServerHttpResponse) exchange.getResponse())
+                .getBodyAsString().block();
+        assertThat(body).contains("\"success\":false");
+        assertThat(body).contains("\"code\":\"UNAUTHENTICATED\"");
     }
 
     @Test
