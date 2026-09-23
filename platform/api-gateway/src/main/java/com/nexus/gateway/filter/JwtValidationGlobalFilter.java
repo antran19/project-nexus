@@ -10,13 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-
 @Component
 public class JwtValidationGlobalFilter implements GlobalFilter, Ordered {
-
-    private static final List<String> PUBLIC_PATH_PREFIXES = List.of(
-            "/api/v1/users/register", "/api/v1/auth/login", "/actuator");
 
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -46,7 +41,10 @@ public class JwtValidationGlobalFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isPublic(String path) {
-        return PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith);
+        if (path.equals("/api/v1/users/register") || path.equals("/api/v1/auth/login")) {
+            return true;
+        }
+        return path.equals("/actuator") || path.startsWith("/actuator/");
     }
 
     private String extractToken(ServerHttpRequest request) {

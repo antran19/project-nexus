@@ -31,6 +31,17 @@ class JwtValidationGlobalFilterTest {
     }
 
     @Test
+    void rejectsSiblingPathThatOnlySharesPublicPrefixWithoutToken() {
+        ServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/v1/users/register-status").build());
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        verify(chain, never()).filter(any());
+    }
+
+    @Test
     void rejectsProtectedPathWithoutToken() {
         ServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/v1/users/me/password").build());
