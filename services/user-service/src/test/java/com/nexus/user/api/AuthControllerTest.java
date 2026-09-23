@@ -1,10 +1,12 @@
 package com.nexus.user.api;
 
+import com.nexus.common.security.JwtTokenProvider;
 import com.nexus.common.web.GlobalExceptionHandler;
 import com.nexus.user.application.exception.InvalidCredentialsException;
 import com.nexus.user.application.usecase.LoginResult;
 import com.nexus.user.application.usecase.LoginUseCase;
 import com.nexus.user.infrastructure.config.SecurityConfig;
+import com.nexus.user.infrastructure.security.JwtAuthenticationFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -19,7 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
-@Import({GlobalExceptionHandler.class, SecurityConfig.class})
+@Import({GlobalExceptionHandler.class, SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class AuthControllerTest {
 
     @Autowired

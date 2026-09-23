@@ -6,6 +6,8 @@ import com.nexus.user.application.exception.DuplicateEmailException;
 import com.nexus.user.application.usecase.RegisterUserUseCase;
 import com.nexus.user.application.usecase.UserRegistrationResult;
 import com.nexus.user.infrastructure.config.SecurityConfig;
+import com.nexus.user.infrastructure.security.JwtAuthenticationFilter;
+import com.nexus.common.security.JwtTokenProvider;
 import com.nexus.common.web.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @WebMvcTest(UserController.class)
-@Import({GlobalExceptionHandler.class, UserApiMapperImpl.class, SecurityConfig.class})
+@Import({GlobalExceptionHandler.class, UserApiMapperImpl.class, SecurityConfig.class,
+        JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class UserControllerTest {
 
     @Autowired
