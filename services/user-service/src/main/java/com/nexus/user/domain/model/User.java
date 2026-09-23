@@ -28,6 +28,10 @@ public class User {
         return new User(id, email, hashedPassword, fullName, roleId, createdAt);
     }
 
+    public User withHashedPassword(String newHashedPassword) {
+        return new User(id, email, newHashedPassword, fullName, roleId, createdAt);
+    }
+
     public String getId() { return id; }
     public String getEmail() { return email; }
     public String getHashedPassword() { return hashedPassword; }

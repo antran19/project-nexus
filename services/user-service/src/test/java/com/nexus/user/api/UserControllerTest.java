@@ -3,6 +3,7 @@ package com.nexus.user.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexus.user.api.mapper.UserApiMapperImpl;
 import com.nexus.user.application.exception.DuplicateEmailException;
+import com.nexus.user.application.usecase.ChangePasswordUseCase;
 import com.nexus.user.application.usecase.RegisterUserUseCase;
 import com.nexus.user.application.usecase.UserRegistrationResult;
 import com.nexus.user.infrastructure.config.SecurityConfig;
@@ -35,6 +36,9 @@ class UserControllerTest {
 
     @MockBean
     private RegisterUserUseCase registerUserUseCase;
+
+    @MockBean
+    private ChangePasswordUseCase changePasswordUseCase;
 
     @Test
     void register_returns201WithCreatedUser() throws Exception {
